@@ -5,12 +5,16 @@ import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.*;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.junit.After;
 import org.junit.Before;
@@ -170,4 +174,60 @@ public class EsDemoTest {
         }
     }
 
+    /**
+     * 查询所有数据
+     */
+    @Test
+    public void queryIndexAll(){
+        SearchResponse searchResponse = client.prepareSearch("school").setTypes("student").setQuery(new MatchAllQueryBuilder()).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            String sourceAsString = hit.getSourceAsString();
+            System.out.println(sourceAsString);
+        }
+    }
+
+    /**
+     * 查询 RangeQuery 范围
+     * 年龄在20到30的人
+     */
+    @Test
+    public void rangeQuery(){
+        SearchResponse searchResponse = client.prepareSearch("school").setTypes("student").setQuery(new RangeQueryBuilder("age").lt(30).gt(20)).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            String sourceAsString = hit.getSourceAsString();
+            System.out.println(sourceAsString);
+        }
+    }
+
+    /**
+     * 词条查询
+     */
+    @Test
+    public void termQuery(){
+        SearchResponse searchResponse = client.prepareSearch("school").setTypes("student").setQuery(new TermQueryBuilder("about", "li")).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            String sourceAsString = hit.getSourceAsString();
+            System.out.println(sourceAsString);
+        }
+    }
+
+    /**
+     * 模糊查询
+     */
+    @Test
+    public void fuzzyQuery(){
+        SearchResponse searchResponse = client.prepareSearch("school").setTypes("student").setQuery(QueryBuilders.fuzzyQuery("about", "li")).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            String sourceAsString = hit.getSourceAsString();
+            System.out.println(sourceAsString);
+        }
+    }
 }

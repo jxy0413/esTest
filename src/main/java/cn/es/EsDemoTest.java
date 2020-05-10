@@ -1,6 +1,8 @@
 package cn.es;
 import com.alibaba.fastjson.JSONObject;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
@@ -8,16 +10,25 @@ import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
+import org.elasticsearch.client.Requests;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.transport.TransportAddress;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.aggregations.Aggregation;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+import org.elasticsearch.search.aggregations.metrics.max.MaxAggregationBuilder;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.profile.aggregation.AggregationProfileBreakdown;
 import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.junit.After;
@@ -25,7 +36,10 @@ import org.junit.Before;
 import org.junit.Test;
 import java.net.InetAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
 /**
  * @Auther jxy
@@ -156,7 +170,7 @@ public class EsDemoTest {
      */
     @Test
     public void deleteIndex(){
-        client.admin().indices().prepareDelete("myindex1").execute().actionGet();
+        client.admin().indices().prepareDelete("player").execute().actionGet();
     }
 
     /**
@@ -274,4 +288,138 @@ public class EsDemoTest {
 
         }
     }
+
+    /**
+     * 高级Api操作
+     */
+
+    /**
+     * 初始化
+     */
+    @Test
+    public void createIndexHigh()throws Exception{
+        client.admin().indices().prepareCreate("player").get();
+        //构建json的数据格式，创建映射
+        XContentBuilder mappingBuilder=jsonBuilder().
+                startObject().startObject("player").
+                startObject("properties").
+                startObject("name").field("type","text").field("index","true").field("fielddata","true").endObject().
+                startObject("age").field("type","integer").endObject().startObject("salary").field("type","integer").endObject().
+                startObject("team").field("type","text").field("index","true").field("fielddata","true").endObject().
+                startObject("position").field("type","text").field("index","true").field("fielddata","true").endObject().endObject().endObject().endObject();
+        PutMappingRequest request=Requests.putMappingRequest("player").type("player").source(mappingBuilder);
+
+        client.admin().indices().putMapping(request).get();
+
+        BulkRequestBuilder bulkRequest=client.prepareBulk();
+        //eitheruseclient#prepare,oruseRequests#todirectlybuildindex/deleterequests
+        bulkRequest.add(client.prepareIndex("player","player","1").setSource(jsonBuilder().startObject().field("name","郭德纲").field("age",33).field("salary",3000).field("team","cav").field("position","sf").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","2").setSource(jsonBuilder().startObject().field("name","于谦").field("age",25).field("salary",2000).field("team","cav").field("position","pg").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","3").setSource(jsonBuilder().startObject().field("name","岳云鹏").field("age",29).field("salary",1000).field("team","war").field("position","pg").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","4").setSource(jsonBuilder().startObject().field("name","爱因斯坦").field("age",21).field("salary",300).field("team","tim").field("position","sg").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","5").setSource(jsonBuilder().startObject().field("name","张云雷").field("age",26).field("salary",2000).field("team","war").field("position","pf").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","6").setSource(jsonBuilder().startObject().field("name","爱迪生").field("age",40).field("salary",1000).field("team","tim").field("position","pf").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","7").setSource(jsonBuilder().startObject().field("name","牛顿").field("age",21).field("salary",500).field("team","tim").field("position","c").endObject()));
+        bulkRequest.add(client.prepareIndex("player","player","8").setSource(jsonBuilder().startObject().field("name","特斯拉").field("age",20).field("salary",500).field("team","tim").field("position","sf").endObject()));
+
+        BulkResponse bulkItemResponses = bulkRequest.get();
+        client.close();
+    }
+
+
+    /**
+     * 统计每一个球队有多少人
+     */
+     @Test
+     public void countByTeam(){
+         SearchRequestBuilder searchRequestBuilder = client.prepareSearch("player").setTypes("player");
+         //按照哪一个字段进行分组
+         TermsAggregationBuilder team = AggregationBuilders.terms("player_count").field("team");
+         searchRequestBuilder.addAggregation(team);
+         //调用get方法 触发真正的执行
+         SearchResponse searchResponse = searchRequestBuilder.get();
+         Aggregations aggregations = searchResponse.getAggregations();
+
+         for(Aggregation aggregation:aggregations){
+             //将aggregation
+             StringTerms stringTems= (StringTerms) aggregation;
+             List<StringTerms.Bucket> buckets = stringTems.getBuckets();
+
+             for(StringTerms.Bucket bucket:buckets){
+                 System.out.println(bucket.getKey()); //获取聚合别名字段
+                 System.out.println(bucket.getDocCount());  //获取统计每个的数量 一共有多少个球员
+             }
+         }
+     }
+
+
+    /**
+     * 统计每个球队每个位置有多少人
+     */
+     @Test
+     public void countByTeamAndPosition(){
+         SearchRequestBuilder searchRequestBuilder = client.prepareSearch("player").setTypes("player");
+         //team的聚合条件
+         TermsAggregationBuilder team = AggregationBuilders.terms("player_count").field("team");
+         TermsAggregationBuilder position = AggregationBuilders.terms("position_count").field("position");
+
+         //关联两个聚合条件
+         team.subAggregation(position);
+         //真正的去执行
+         SearchResponse searchResponse = searchRequestBuilder.addAggregation(team).get();
+         Aggregations aggregations = searchResponse.getAggregations();
+         for(Aggregation aggregation:aggregations){
+             //将aggregation
+             StringTerms stringTems= (StringTerms) aggregation;
+             List<StringTerms.Bucket> buckets = stringTems.getBuckets();
+
+             for(StringTerms.Bucket bucket:buckets){
+                 System.out.println(bucket.getKey()); //获取聚合别名字段
+                 System.out.println(bucket.getDocCount());  //获取统计每个的数量 一共有多少个球员
+
+                 //求每个位置多 少人
+                 Aggregation position_count = bucket.getAggregations().get("position_count");
+                 StringTerms positionTerm= (StringTerms) position_count;
+
+                 List<StringTerms.Bucket> buckets1 = positionTerm.getBuckets();
+                 for(StringTerms.Bucket bucket1:buckets1){
+                     System.out.println("该队伍一共有"+bucket1.getKey()+"有"+bucket1.getDocCount()+"人");
+                 }
+
+             }
+
+         }
+
+     }
+
+    /**
+     * 分组求每个球队中年龄最大的值
+     */
+     @Test
+     public void maxAge(){
+         SearchRequestBuilder searchRequestBuilder = client.prepareSearch("player").setTypes("player");
+         //按照球队分组
+         TermsAggregationBuilder team = AggregationBuilders.terms("player_count").field("team");
+         //对age字段取最大值
+         MaxAggregationBuilder age = AggregationBuilders.max("max_age").field("age");
+         //设置分组
+         team.subAggregation(age);
+
+         SearchResponse searchResponse = searchRequestBuilder.addAggregation(team).get();
+         Aggregations aggregations = searchResponse.getAggregations();
+
+         for(Aggregation aggregation:aggregations){
+             //将aggregation
+             StringTerms stringTems= (StringTerms) aggregation;
+             List<StringTerms.Bucket> buckets = stringTems.getBuckets();
+             System.out.println(stringTems.toString());
+             for(StringTerms.Bucket bucket:buckets){
+                 Aggregation max_age = bucket.getAggregations().get("max_age");
+                 System.out.println(max_age.toString());
+             }
+         }
+     }
+
+
+
 }

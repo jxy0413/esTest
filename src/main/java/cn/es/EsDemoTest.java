@@ -5,16 +5,20 @@ import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
+import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
+import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.junit.After;
 import org.junit.Before;
@@ -228,6 +232,46 @@ public class EsDemoTest {
         for(SearchHit hit:hits1){
             String sourceAsString = hit.getSourceAsString();
             System.out.println(sourceAsString);
+        }
+    }
+
+    /**
+     * 分页查询
+     */
+    @Test
+    public void getPageIndex(){
+        int pageSize = 5;
+        int pageNum = 2;
+        //计算初试页
+        int startNum = (pageNum-1) * pageSize;
+        SearchResponse searchResponse = client.prepareSearch("school").setTypes("student").setQuery(QueryBuilders.matchAllQuery()).addSort("age", SortOrder.ASC).setFrom(startNum).setSize(pageSize).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            String sourceAsString = hit.getSourceAsString();
+            System.out.println(sourceAsString);
+        }
+    }
+
+    /**
+     * 高亮查询
+     */
+    @Test
+    public void highLight(){
+        SearchRequestBuilder searchRequestBuilder = client.prepareSearch("school").setTypes("student").setQuery(QueryBuilders.termQuery("sex", "boy"));
+        //通过HighlightBuilder 来显示
+        HighlightBuilder highlightBuilder = new HighlightBuilder();
+        highlightBuilder.field("sex").preTags("<font style='color:red'>").preTags("</font>");
+        SearchResponse searchResponse = searchRequestBuilder.highlighter(highlightBuilder).get();
+        SearchHits hits = searchResponse.getHits();
+        SearchHit[] hits1 = hits.getHits();
+        for(SearchHit hit:hits1){
+            System.out.println(hit.getSourceAsString());
+            Text[] sexes = hit.getHighlightFields().get("sex").getFragments();
+            for(Text say:sexes){
+                System.out.println(say);
+            }
+
         }
     }
 }

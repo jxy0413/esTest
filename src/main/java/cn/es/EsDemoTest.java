@@ -170,7 +170,7 @@ public class EsDemoTest {
      */
     @Test
     public void deleteIndex(){
-        client.admin().indices().prepareDelete("player").execute().actionGet();
+        client.admin().indices().prepareDelete("fdcp-dev").execute().actionGet();
     }
 
     /**
@@ -178,7 +178,7 @@ public class EsDemoTest {
      */
     @Test
     public void queryIndex(){
-        GetResponse documentFields = client.prepareGet("test", "ecodata", "13").get();
+        GetResponse documentFields = client.prepareGet("fdcp-dev", "ecodata", "13").get();
         String index = documentFields.getIndex();
         String type = documentFields.getType();
         String id = documentFields.getId();
@@ -420,6 +420,22 @@ public class EsDemoTest {
          }
      }
 
-
-
+     @Test
+     public void query(){
+         long time1 = System.currentTimeMillis();
+         SearchResponse searchResponse = client.prepareSearch("fdcp-dev").setTypes("ecodata").
+                 setQuery(QueryBuilders.matchAllQuery()).
+                 setQuery(QueryBuilders.boolQuery().
+                         must(QueryBuilders.matchQuery("station_id", "2")).
+                         must(QueryBuilders.matchQuery("datatype_id", "646"))).get();
+         SearchHits hits = searchResponse.getHits();
+         SearchHit[] hits1 = hits.getHits();
+         for(SearchHit hit:hits1){
+             String sourceAsString = hit.getSourceAsString();
+             System.out.println(sourceAsString);
+         }
+         long time2 = System.currentTimeMillis();
+         Long time =  ((time2 - time1));
+         System.out.println("执行了："+time+"毫秒！");
+     }
 }

@@ -1,5 +1,6 @@
 package cn.es.controller;
 
+import cn.es.EsDemoTest;
 import cn.es.bean.Ecodata;
 import cn.es.common.ResultModel;
 import cn.es.mapper.EcodataMapper;
@@ -48,7 +49,7 @@ public class EcodataController {
         System.out.println("执行了："+time+"毫秒！");
     }
 
-    @ApiOperation("测试")
+    @ApiOperation("测试mysql")
     @GetMapping("/getList/{stationId}/{datatypeId}")
     public void getList(@PathVariable Integer stationId,@PathVariable Integer datatypeId){
         long time1 = System.currentTimeMillis();
@@ -58,4 +59,5 @@ public class EcodataController {
         Long time =  ((time2 - time1));
         System.out.println("执行了："+time+"毫秒！");
     }
+
 }

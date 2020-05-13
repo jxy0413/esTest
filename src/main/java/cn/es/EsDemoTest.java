@@ -34,6 +34,8 @@ import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.stereotype.Service;
+
 import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.List;

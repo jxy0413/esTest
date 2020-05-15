@@ -5,6 +5,7 @@ import cn.es.bean.Ecodata;
 import cn.es.common.ResultModel;
 import cn.es.mapper.EcodataMapper;
 import cn.es.service.EcodataService;
+import cn.es.service.EsService;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,8 @@ import java.util.List;
 public class EcodataController {
     @Autowired
     private EcodataService ecodataService;
+    @Autowired
+    private EsService esService;
     @Autowired
     private EcodataMapper ecodataMapper;
 
@@ -60,4 +63,10 @@ public class EcodataController {
         System.out.println("执行了："+time+"毫秒！");
     }
 
+
+    @ApiOperation("测试es")
+    @GetMapping("/getes/{stationId}/{datatypeId}")
+    public void getEs(@PathVariable String stationId,@PathVariable String datatypeId)throws Exception{
+        esService.queryEs(stationId,datatypeId);
+    }
 }

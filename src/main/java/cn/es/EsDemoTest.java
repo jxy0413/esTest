@@ -79,7 +79,7 @@ public class EsDemoTest {
                 "   \"postDate\":\"2013-10-1\",\n" +
                 "   \"message\":\"traving out es\"\n" +
                 "}";
-        IndexRequestBuilder indexRequestBuilder = client.prepareIndex("myindex1", "article", "21").setSource(json, XContentType.JSON);
+        IndexRequestBuilder indexRequestBuilder = client.prepareIndex("myindex2", "article", "21").setSource(json, XContentType.JSON);
         //调用get真正执行
         IndexResponse indexResponse = indexRequestBuilder.get();
     }
